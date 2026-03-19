@@ -3,72 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>股票交易日誌</title>
+    <title>股票帳本</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 解決 iOS 鍵盤喚起的核心 CSS */
-        input, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
-            font-size: 16px !important; /* iOS 規定 16px 以上才不會自動縮放，減少 Bug */
-        }
-        body { 
-            cursor: pointer; /* 讓 iOS 認為整個畫面都是可點擊的 */
-        }
+        input, select { font-size: 16px !important; -webkit-user-select: text !important; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-gray-50 p-4">
+<body class="bg-gray-100 p-4">
     <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold mb-4">📈 交易日誌</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">📈 我的交易紀錄</h1>
+            <button onclick="openModal()" class="bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg text-2xl">+</button>
+        </div>
         
-        <div class="bg-blue-600 text-white p-6 rounded-2xl mb-6 shadow-lg">
-            <p class="text-xs opacity-75">帳戶總餘額</p>
-            <h2 id="totalBalance" class="text-3xl font-bold">$ 0</h2>
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 text-center">
+            <p class="text-gray-400 text-sm">帳戶總餘額</p>
+            <h2 id="totalBalance" class="text-3xl font-bold text-blue-600">$ 0</h2>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl shadow-sm space-y-3">
-            <div class="grid grid-cols-2 gap-2">
-                <input type="date" id="date" class="ios-input w-full p-3 bg-gray-100 rounded-lg">
-                <select id="type" class="ios-input w-full p-3 bg-gray-100 rounded-lg" onchange="toggleFields()">
+        <div id="recordList" class="space-y-3"></div>
+    </div>
+
+    <div id="inputModal" class="modal p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+            <h3 class="font-bold mb-4 text-lg text-center">新增交易</h3>
+            <div class="space-y-3">
+                <input type="date" id="date" class="w-full p-3 bg-gray-100 rounded-xl">
+                <select id="type" class="w-full p-3 bg-gray-100 rounded-xl" onchange="toggleFields()">
                     <option value="buy">買入股票</option>
                     <option value="sell">賣出股票</option>
                     <option value="in">存入現金</option>
                     <option value="out">提出現金</option>
                 </select>
+                <input type="text" id="symbol" placeholder="標的名稱 (如: 2330)" class="w-full p-3 bg-gray-100 rounded-xl">
+                <div id="stockFields" class="grid grid-cols-2 gap-2">
+                    <input type="number" id="price" placeholder="單價" class="w-full p-3 bg-gray-100 rounded-xl">
+                    <input type="number" id="qty" placeholder="股數" class="w-full p-3 bg-gray-100 rounded-xl">
+                </div>
+                <input type="number" id="amount" placeholder="金額" class="w-full p-3 bg-gray-100 rounded-xl hidden">
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeModal()" class="flex-1 bg-gray-200 py-3 rounded-xl font-bold text-gray-600">取消</button>
+                    <button onclick="addRecord()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-white">儲存</button>
+                </div>
             </div>
-
-            <input type="text" id="symbol" placeholder="標的名稱" onclick="this.focus();"
-                   class="ios-input w-full p-3 bg-gray-100 rounded-lg">
-            
-            <div id="stockFields" class="grid grid-cols-2 gap-2">
-                <input type="number" id="price" placeholder="單價" onclick="this.focus();"
-                       class="ios-input w-full p-3 bg-gray-100 rounded-lg">
-                <input type="number" id="qty" placeholder="股數" onclick="this.focus();"
-                       class="ios-input w-full p-3 bg-gray-100 rounded-lg">
-            </div>
-
-            <input type="number" id="amount" placeholder="金額" onclick="this.focus();"
-                   class="ios-input w-full p-3 bg-gray-100 rounded-lg hidden">
-
-            <button onclick="addRecord()" class="w-full bg-blue-500 text-white py-4 rounded-xl font-bold">儲存</button>
         </div>
-
-        <div id="recordList" class="mt-6 space-y-3"></div>
     </div>
 
     <script>
         document.getElementById('date').valueAsDate = new Date();
-        let records = JSON.parse(localStorage.getItem('trading_v4') || '[]');
+        let records = JSON.parse(localStorage.getItem('trading_v5') || '[]');
 
-        // 核心修正：強制 iOS 點擊輸入框時聚焦
-        const inputs = document.querySelectorAll('.ios-input');
-        inputs.forEach(input => {
-            input.addEventListener('touchstart', function() {
-                this.focus();
-            });
-        });
+        function openModal() {
+            document.getElementById('inputModal').classList.add('active');
+            // 強制延遲聚焦，讓 iOS 有時間處理過度動畫
+            setTimeout(() => document.getElementById('symbol').focus(), 300);
+        }
+
+        function closeModal() {
+            document.getElementById('inputModal').classList.remove('active');
+        }
 
         function toggleFields() {
             const type = document.getElementById('type').value;
@@ -82,25 +79,24 @@
             let balance = 0;
             list.innerHTML = '';
             
-            // 排序並計算
             records.sort((a, b) => new Date(a.date) - new Date(b.date));
             records.forEach(r => balance += r.change);
             
             [...records].reverse().forEach((r, i) => {
                 const item = document.createElement('div');
-                item.className = `bg-white p-4 rounded-xl shadow-sm border-l-4 ${r.change >= 0 ? 'border-green-500' : 'border-red-500'} flex justify-between`;
+                item.className = `bg-white p-4 rounded-xl shadow-sm border-l-4 ${r.change >= 0 ? 'border-green-500' : 'border-red-500'} flex justify-between items-center`;
                 item.innerHTML = `
                     <div>
                         <div class="text-xs text-gray-400">${r.date}</div>
-                        <div class="font-bold">${r.symbol || '現金'}</div>
-                        <div class="text-sm ${r.change >= 0 ? 'text-green-600' : 'text-red-600'}">${r.change.toLocaleString()}</div>
+                        <div class="font-bold text-gray-700">${r.symbol || '現金'} (${r.type})</div>
+                        <div class="${r.change >= 0 ? 'text-green-600' : 'text-red-600'} font-bold">${r.change.toLocaleString()}</div>
                     </div>
-                    <button onclick="deleteRecord(${records.length - 1 - i})" class="text-gray-300">🗑️</button>
+                    <button onclick="deleteRecord(${records.length - 1 - i})" class="text-gray-300 px-2 text-xl">×</button>
                 `;
                 list.appendChild(item);
             });
             document.getElementById('totalBalance').innerText = '$ ' + balance.toLocaleString();
-            localStorage.setItem('trading_v4', JSON.stringify(records));
+            localStorage.setItem('trading_v5', JSON.stringify(records));
         }
 
         function addRecord() {
@@ -108,16 +104,17 @@
             const symbol = document.getElementById('symbol').value;
             const price = parseFloat(document.getElementById('price').value) || 0;
             const qty = parseInt(document.getElementById('qty').value) || 0;
-            let amount = parseFloat(document.getElementById('amount').value) || 0;
-            let change = (type === 'buy' || type === 'sell') ? (type === 'buy' ? -price * qty : price * qty) : (type === 'in' ? amount : -amount);
+            let amt = parseFloat(document.getElementById('amount').value) || 0;
+            let change = (type === 'buy' || type === 'sell') ? (type === 'buy' ? -price * qty : price * qty) : (type === 'in' ? amt : -amt);
 
             records.push({ date: document.getElementById('date').value, type, symbol, change });
             updateUI();
+            closeModal();
             ['symbol', 'price', 'qty', 'amount'].forEach(id => document.getElementById(id).value = '');
         }
 
         function deleteRecord(index) {
-            if(confirm('刪除？')) { records.splice(index, 1); updateUI(); }
+            if(confirm('刪除這筆紀錄？')) { records.splice(index, 1); updateUI(); }
         }
 
         updateUI();
