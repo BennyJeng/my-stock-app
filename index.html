@@ -9,45 +9,58 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         input, select { font-size: 16px !important; -webkit-user-select: text !important; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; }
         .modal.active { display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 p-4 min-h-screen">
     <div class="max-w-md mx-auto">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">📈 我的交易紀錄</h1>
-            <button onclick="openModal()" class="bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg text-2xl">+</button>
+        <div class="flex justify-between items-center mb-6 pt-4">
+            <h1 class="text-2xl font-bold text-gray-800 tracking-tight">📈 交易精算日誌</h1>
+            <button onclick="openModal()" class="bg-indigo-600 text-white w-12 h-12 rounded-full shadow-lg text-3xl font-light">+</button>
         </div>
         
-        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 text-center">
-            <p class="text-gray-400 text-sm">帳戶總餘額</p>
-            <h2 id="totalBalance" class="text-3xl font-bold text-blue-600">$ 0</h2>
+        <div class="bg-white p-6 rounded-3xl shadow-sm mb-6 border border-gray-200">
+            <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">帳戶總可用餘額</p>
+            <h2 id="totalBalance" class="text-3xl font-black text-gray-800">$ 0</h2>
         </div>
 
-        <div id="recordList" class="space-y-3"></div>
+        <div id="recordList" class="space-y-3">
+            </div>
     </div>
 
     <div id="inputModal" class="modal p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
-            <h3 class="font-bold mb-4 text-lg text-center">新增交易</h3>
-            <div class="space-y-3">
-                <input type="date" id="date" class="w-full p-3 bg-gray-100 rounded-xl">
-                <select id="type" class="w-full p-3 bg-gray-100 rounded-xl" onchange="toggleFields()">
-                    <option value="buy">買入股票</option>
-                    <option value="sell">賣出股票</option>
-                    <option value="in">存入現金</option>
-                    <option value="out">提出現金</option>
-                </select>
-                <input type="text" id="symbol" placeholder="標的名稱 (如: 2330)" class="w-full p-3 bg-gray-100 rounded-xl">
-                <div id="stockFields" class="grid grid-cols-2 gap-2">
-                    <input type="number" id="price" placeholder="單價" class="w-full p-3 bg-gray-100 rounded-xl">
-                    <input type="number" id="qty" placeholder="股數" class="w-full p-3 bg-gray-100 rounded-xl">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <h3 class="font-bold mb-5 text-xl text-center text-gray-800">新增交易項目</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400 ml-1">日期</label>
+                    <input type="date" id="date" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
                 </div>
-                <input type="number" id="amount" placeholder="金額" class="w-full p-3 bg-gray-100 rounded-xl hidden">
-                <div class="flex gap-2 pt-2">
-                    <button onclick="closeModal()" class="flex-1 bg-gray-200 py-3 rounded-xl font-bold text-gray-600">取消</button>
-                    <button onclick="addRecord()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-white">儲存</button>
+                
+                <select id="type" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 font-medium" onchange="toggleFields()">
+                    <option value="buy">買入股票 (支出)</option>
+                    <option value="sell">賣出股票 (收入)</option>
+                    <option value="in">存入現金 (增加)</option>
+                    <option value="out">提出現金 (減少)</option>
+                </select>
+
+                <input type="text" id="symbol" placeholder="標的代碼 / 項目說明" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-gray-400 ml-1">總變動金額 (含手續費)</label>
+                        <input type="number" id="amount" placeholder="例如: 50035" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 font-bold text-blue-600">
+                    </div>
+                    <div id="qtyField">
+                        <label class="text-xs text-gray-400 ml-1">成交股數</label>
+                        <input type="number" id="qty" placeholder="例如: 1000" class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closeModal()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-gray-500">取消</button>
+                    <button onclick="addRecord()" class="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-white shadow-lg">確認儲存</button>
                 </div>
             </div>
         </div>
@@ -55,12 +68,12 @@
 
     <script>
         document.getElementById('date').valueAsDate = new Date();
-        let records = JSON.parse(localStorage.getItem('trading_v5') || '[]');
+        // 使用新的儲存 key 以免跟舊資料混淆
+        let records = JSON.parse(localStorage.getItem('trading_v_final') || '[]');
 
         function openModal() {
             document.getElementById('inputModal').classList.add('active');
-            // 強制延遲聚焦，讓 iOS 有時間處理過度動畫
-            setTimeout(() => document.getElementById('symbol').focus(), 300);
+            setTimeout(() => document.getElementById('amount').focus(), 300);
         }
 
         function closeModal() {
@@ -70,8 +83,8 @@
         function toggleFields() {
             const type = document.getElementById('type').value;
             const isStock = type === 'buy' || type === 'sell';
-            document.getElementById('stockFields').style.display = isStock ? 'grid' : 'none';
-            document.getElementById('amount').style.display = isStock ? 'none' : 'block';
+            document.getElementById('qtyField').style.opacity = isStock ? '1' : '0.3';
+            document.getElementById('qty').disabled = !isStock;
         }
 
         function updateUI() {
@@ -79,42 +92,67 @@
             let balance = 0;
             list.innerHTML = '';
             
+            // 依日期排序
             records.sort((a, b) => new Date(a.date) - new Date(b.date));
             records.forEach(r => balance += r.change);
             
             [...records].reverse().forEach((r, i) => {
                 const item = document.createElement('div');
-                item.className = `bg-white p-4 rounded-xl shadow-sm border-l-4 ${r.change >= 0 ? 'border-green-500' : 'border-red-500'} flex justify-between items-center`;
+                item.className = `bg-white p-5 rounded-2xl shadow-sm border-l-8 ${r.change >= 0 ? 'border-emerald-400' : 'border-rose-400'} flex justify-between items-center transition-all active:scale-95`;
+                
+                const typeName = { 'buy': '買入', 'sell': '賣出', 'in': '存入', 'out': '提出' }[r.type];
+                
                 item.innerHTML = `
-                    <div>
-                        <div class="text-xs text-gray-400">${r.date}</div>
-                        <div class="font-bold text-gray-700">${r.symbol || '現金'} (${r.type})</div>
-                        <div class="${r.change >= 0 ? 'text-green-600' : 'text-red-600'} font-bold">${r.change.toLocaleString()}</div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${r.change >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${typeName}</span>
+                            <span class="font-bold text-gray-700">${r.symbol || '一般往來'}</span>
+                        </div>
+                        <div class="text-[10px] text-gray-400 font-medium">${r.date} ${r.qty ? `| 持股變動: ${r.qty} 股` : ''}</div>
+                        <div class="text-lg font-black mt-1 ${r.change >= 0 ? 'text-emerald-500' : 'text-rose-500'}">
+                            ${r.change >= 0 ? '+' : ''}${r.change.toLocaleString()}
+                        </div>
                     </div>
-                    <button onclick="deleteRecord(${records.length - 1 - i})" class="text-gray-300 px-2 text-xl">×</button>
+                    <button onclick="deleteRecord(${records.length - 1 - i})" class="text-gray-200 hover:text-rose-300 p-2 text-2xl">×</button>
                 `;
                 list.appendChild(item);
             });
             document.getElementById('totalBalance').innerText = '$ ' + balance.toLocaleString();
-            localStorage.setItem('trading_v5', JSON.stringify(records));
+            localStorage.setItem('trading_v_final', JSON.stringify(records));
         }
 
         function addRecord() {
             const type = document.getElementById('type').value;
             const symbol = document.getElementById('symbol').value;
-            const price = parseFloat(document.getElementById('price').value) || 0;
             const qty = parseInt(document.getElementById('qty').value) || 0;
             let amt = parseFloat(document.getElementById('amount').value) || 0;
-            let change = (type === 'buy' || type === 'sell') ? (type === 'buy' ? -price * qty : price * qty) : (type === 'in' ? amt : -amt);
+            
+            // 重要邏輯：判定正負號
+            // 買入與提出 = 帳戶錢變少 (負)
+            // 賣出與存入 = 帳戶錢變多 (正)
+            let change = (type === 'buy' || type === 'out') ? -Math.abs(amt) : Math.abs(amt);
 
-            records.push({ date: document.getElementById('date').value, type, symbol, change });
+            if (!amt && amt !== 0) { alert('請輸入金額'); return; }
+
+            records.push({ 
+                date: document.getElementById('date').value, 
+                type, 
+                symbol, 
+                qty: (type === 'buy' || type === 'sell') ? qty : null,
+                change 
+            });
+            
             updateUI();
             closeModal();
-            ['symbol', 'price', 'qty', 'amount'].forEach(id => document.getElementById(id).value = '');
+            // 清空
+            ['symbol', 'qty', 'amount'].forEach(id => document.getElementById(id).value = '');
         }
 
         function deleteRecord(index) {
-            if(confirm('刪除這筆紀錄？')) { records.splice(index, 1); updateUI(); }
+            if(confirm('確定刪除此筆交易？餘額將重新計算。')) {
+                records.splice(index, 1);
+                updateUI();
+            }
         }
 
         updateUI();
