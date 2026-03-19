@@ -3,80 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票交易日誌</title>
+    <title>股票交易日誌 Pro</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .record-card { transition: transform 0.1s; }
+        .record-card:active { transform: scale(0.98); }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div id="app" class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold mb-4">📈 交易日誌</h1>
+<body class="bg-gray-50 min-h-screen pb-10">
+    <div id="app" class="max-w-md mx-auto p-4">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <span class="mr-2">📈</span> 投資交易日誌
+        </h1>
         
-        <div class="bg-blue-600 text-white p-6 rounded-xl mb-6 shadow-lg">
-            <p class="text-sm opacity-80">帳戶總餘額</p>
-            <h2 id="totalBalance" class="text-3xl font-bold">$ 0</h2>
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-2xl mb-6 shadow-xl">
+            <p class="text-sm opacity-80 font-medium">當前帳戶預估結餘</p>
+            <h2 id="totalBalance" class="text-3xl font-bold mt-1">$ 0</h2>
         </div>
 
-        <div class="bg-white p-4 rounded-lg shadow mb-6">
-            <select id="type" class="w-full mb-2 p-2 border rounded">
-                <option value="buy">買入股票</option>
-                <option value="sell">賣出股票</option>
-                <option value="in">存入現金</option>
-                <option value="out">提出現金</option>
-            </select>
-            <input type="text" id="symbol" placeholder="標的/備註" class="w-full mb-2 p-2 border rounded">
-            <input type="number" id="price" placeholder="單價 (選填)" class="w-full mb-2 p-2 border rounded">
-            <input type="number" id="qty" placeholder="數量 (選填)" class="w-full mb-2 p-2 border rounded">
-            <input type="number" id="amount" placeholder="手動變動金額 (選填)" class="w-full mb-2 p-2 border rounded">
-            <button onclick="addRecord()" class="w-full bg-blue-500 text-white p-2 rounded font-bold">儲存紀錄</button>
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h3 class="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">新增交易紀錄</h3>
+            
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="col-span-1">
+                    <label class="text-xs text-gray-500 ml-1">交易日期</label>
+                    <input type="date" id="date" class="w-full p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="col-span-1">
+                    <label class="text-xs text-gray-500 ml-1">類型</label>
+                    <select id="type" class="w-full p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onchange="toggleFields()">
+                        <option value="buy">買入股票</option>
+                        <option value="sell">賣出股票</option>
+                        <option value="in">存入現金</option>
+                        <option value="out">提出現金</option>
+                    </select>
+                </div>
+            </div>
+
+            <input type="text" id="symbol" placeholder="標的代碼或名稱 (如: 2330)" class="w-full mb-3 p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            
+            <div id="stockFields" class="grid grid-cols-2 gap-2 mb-3">
+                <input type="number" id="price" placeholder="成交單價" class="w-full p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                <input type="number" id="qty" placeholder="股數" class="w-full p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div id="cashField" class="hidden mb-3">
+                <input type="number" id="amount" placeholder="金額" class="w-full p-2 bg-gray-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <button onclick="addRecord()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-md transition-all">
+                儲存交易
+            </button>
         </div>
 
-        <div id="recordList" class="space-y-3"></div>
+        <div class="flex justify-between items-center mb-3 px-1">
+            <h3 class="text-lg font-bold text-gray-700">歷史紀錄</h3>
+            <span id="recordCount" class="text-xs text-gray-400">共 0 筆</span>
+        </div>
+        <div id="recordList" class="space-y-3">
+            </div>
     </div>
 
     <script>
-        let records = JSON.parse(localStorage.getItem('stock_records') || '[]');
+        // 初始化日期為今天
+        document.getElementById('date').valueAsDate = new Date();
+
+        // 從本地存儲讀取資料
+        let records = JSON.parse(localStorage.getItem('my_trading_v2') || '[]');
+
+        function toggleFields() {
+            const type = document.getElementById('type').value;
+            const stockFields = document.getElementById('stockFields');
+            const cashField = document.getElementById('cashField');
+            
+            if (type.includes('buy') || type.includes('sell')) {
+                stockFields.classList.remove('hidden');
+                stockFields.classList.add('grid');
+                cashField.classList.add('hidden');
+            } else {
+                stockFields.classList.add('hidden');
+                stockFields.classList.remove('grid');
+                cashField.classList.remove('hidden');
+            }
+        }
 
         function updateUI() {
             const list = document.getElementById('recordList');
             const totalDisplay = document.getElementById('totalBalance');
+            const countDisplay = document.getElementById('recordCount');
             list.innerHTML = '';
-            let balance = 0;
+            
+            // 排序：日期由新到舊，若日期相同則依索引排序
+            records.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            let currentBalance = 0;
+            // 重新計算總額 (依日期順序累加)
+            const calcRecords = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+            calcRecords.forEach(r => currentBalance += r.change);
 
             records.forEach((r, index) => {
-                balance += r.change;
-                const item = document.createElement('div');
-                item.className = "bg-white p-3 rounded shadow-sm border-l-4 " + (r.change >= 0 ? 'border-green-500' : 'border-red-500');
-                item.innerHTML = `
-                    <div class="flex justify-between">
-                        <span class="font-bold">${r.symbol} (${r.type})</span>
-                        <span class="text-gray-500 text-sm">${r.date}</span>
+                const card = document.createElement('div');
+                card.className = "record-card bg-white p-4 rounded-2xl shadow-sm border-l-4 flex justify-between items-center " + 
+                                (r.change >= 0 ? 'border-green-500' : 'border-red-500');
+                
+                const typeText = { 'buy': '買入', 'sell': '賣出', 'in': '入金', 'out': '出金' }[r.type];
+                
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center mb-1">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded mr-2 ${r.change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${typeText}</span>
+                            <span class="font-bold text-gray-800">${r.symbol || '現金往來'}</span>
+                        </div>
+                        <div class="text-xs text-gray-400">${r.date}</div>
+                        <div class="text-sm font-medium mt-1 text-gray-600">
+                            ${r.qty > 0 ? `${r.qty}股 @ ${r.price}` : ''} 
+                            變動: <span class="${r.change >= 0 ? 'text-green-600' : 'text-red-600'}">${r.change.toLocaleString()}</span>
+                        </div>
                     </div>
-                    <div class="text-sm text-gray-600">變動: ${r.change} | 餘額: ${balance}</div>
+                    <button onclick="deleteRecord(${index})" class="ml-4 p-2 text-gray-300 hover:text-red-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
                 `;
-                list.prepend(item);
+                list.appendChild(card);
             });
-            totalDisplay.innerText = '$ ' + balance.toLocaleString();
-            localStorage.setItem('stock_records', JSON.stringify(records));
+
+            totalDisplay.innerText = '$ ' + currentBalance.toLocaleString();
+            countDisplay.innerText = `共 ${records.length} 筆`;
+            localStorage.setItem('my_trading_v2', JSON.stringify(records));
         }
 
         function addRecord() {
+            const date = document.getElementById('date').value;
             const type = document.getElementById('type').value;
             const symbol = document.getElementById('symbol').value;
             const price = parseFloat(document.getElementById('price').value) || 0;
             const qty = parseInt(document.getElementById('qty').value) || 0;
             let change = parseFloat(document.getElementById('amount').value) || 0;
 
+            if (!date) { alert('請選擇日期'); return; }
+
             if (type === 'buy') change = -(price * qty);
             else if (type === 'sell') change = (price * qty);
             else if (type === 'out') change = -Math.abs(change);
 
-            records.push({
-                date: new Date().toLocaleDateString(),
-                type, symbol, change
-            });
+            records.push({ date, type, symbol, price, qty, change });
+            
+            // 清空輸入
+            document.getElementById('symbol').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('qty').value = '';
+            document.getElementById('amount').value = '';
+            
             updateUI();
         }
+
+        function deleteRecord(index) {
+            if (confirm('確定要刪除這筆紀錄嗎？')) {
+                records.splice(index, 1);
+                updateUI();
+            }
+        }
+
         updateUI();
     </script>
 </body>
